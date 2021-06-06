@@ -1,0 +1,1 @@
+cd /var/www/wordpress/taihoa/wp-content/plugins/1-demoPlugins
