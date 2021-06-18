@@ -11,6 +11,19 @@ Author: dttl
 Version: 1.00
 Author URI: http://noteatext.com
 */
+// định nghĩa các hằng số đường dẫn
+define('DTTL_PL_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('DTTL_PL_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('DTTL_PL_VIEWS_DIR', DTTL_PL_PLUGIN_DIR . '/views');
+if(!is_admin()){
+    require_once DTTL_PL_PLUGIN_DIR . 'public.php';
+    new dttl_pl_pub();
+}else{
+    require_once DTTL_PL_PLUGIN_DIR . 'admin.php';
+    new dttl_pl_ad();
+}
+// lấy đường dẫn của plugin hiện tại
+$cssUrl = plugins_url('/css/abc.css', __FILE__); // hamf plugins_url lấy đường dẫn tới plugin hiện tại và nối với đường dẫn đưa vào
 // thực hiện các lệnh khi active plugin
 register_activation_hook(__FILE__, 'dttl_pl_active');// chạy các hàm khi active plugin
 // tạo bảng để lưu dữ liệu khi kích hoạt plugin
@@ -85,11 +98,5 @@ function dttl_pl_uninstall(){
     $table_name = $wpdb->prefix . 'dttl_pl_test';
     $sql = "DROP TABLE IF EXISTS " . $table_name;
     $wpdb->query($sql);// thực thi sql bằng đối tượng wpdb
-}
-$path = dirname(__FILE__) . '/inc/admin.php';
-if (is_admin()){
-    require_once dirname(__FILE__) . '/inc/admin.php'; // dirname(__FILE__) gọi ra đường dẫn chứa file chạy chính
-} else{
-    require_once dirname(__FILE__) . '/inc/public.php'; // dirname(__FILE__) gọi ra đường dẫn chứa file chạy chính
 }
 ?>
