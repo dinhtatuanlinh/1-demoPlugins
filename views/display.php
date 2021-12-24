@@ -6,7 +6,7 @@
     ?>
     <h2>my menu</h2>
     <p>đây là test thêm dữ liệu vào option table</p>
-    <form method='post' action="options.php" id="dttl-demoPlugin-form-setting" enctype="multipart/form-data">
+    <form method='post' action="options.php" id="<?php echo $this->_menuSlug; ?>" enctype="multipart/form-data">
     <!-- action là options.php để wordpress tự động lưu dữ liệu vào bảng options -->
         <!-- phương thức  -->
         <?php // echo settings_fields('dttl_pl_options'); ?> 

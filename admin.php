@@ -1,4 +1,5 @@
 <?php
+// tạo các mục menu trong trang quản trị
 class dttl_pl_ad{
     private $_menuSlug = 'dttl-pl-my-main-menu';
     private $_setting_options; // biến chứa dữ liệu đang được lưu trong opiton
@@ -9,28 +10,68 @@ class dttl_pl_ad{
         add_action('admin_menu', array($this, 'settingMainMenu'));
         add_action('admin_menu', array($this, 'settingSubMainMenu'));
         add_action('admin_menu', array($this, 'removeMenu'));
+        
         add_action('admin_init', array($this, 'dttl_get_data_from_option'));
         // add_action('admin_init', array($this, 'register_setting_fields'));
+        // action hook admin_init để gắn form vào trong bảng menu mới tạo thông qua hàm uploadFile
         add_action('admin_init', array($this, 'uploadFile'));
+        // lấy dữ liệu cũ để điền vào biến _setting_options
         $this->_setting_options['dttl_pl_name'] = get_option('dttl_pl_name');
         $this->_setting_options['dttl_pl_uploadFile'] = get_option('dttl_pl_uploadFile');
         
         // echo '<pre>';
         // print_r($this->_setting_options);
         // echo '</pre>';
+        // 10. ajax
+        $this->ajaxPage();
     }
-    // 9. upload file
+    // 10. ajax
+    public function ajaxPage(){
+        require_once DTTL_PL_INC_DIR . '/ajax.php';
+        new DttlMpSettingAjax();
+    }
+    // 9. upload file (đăng ký một setting)
     public function uploadFile(){
-        register_setting( 'dttl_pl_uploadFile', 'dttl_pl_uploadFile', array($this, 'validate_setting') );// tạo dòng dữ liệu trên bảng option
+        // tạo dòng dữ liệu trên bảng option
+        // đăng ký 1 setting bằng register_setting. tham số thứ 2 là tên được đưa vào cột option name của bảng options.
+        // tham số thứ nhất là tên của setting đăng ký
+        // tham số thứ 3 là hàm sẽ sử dùng để validate dữ liệu
+        register_setting( 'dttl_pl_uploadFile', 'dttl_pl_uploadFile', array($this, 'validate_setting') );
         $mainSection = 'dttl_pl_uploadFile_section';
+        // đăng ký vùng nhập dữ liệu bằng add_settings_section
+        // tham số thứ 1 là tên của section viết liền
+        //tham số thứ 2 là title của section
+        // tham số thứ 3 là 
         add_settings_section($mainSection, 'dttl upload file', array($this, 'main_section_view'), $this->_menuSlug);
         // add_settings_field( 'dttl_pl_uploadFile_field', 'my uploadFile field', array($this, 'view_uploadFile_input'), $this->_menuSlug, $mainSection );
-        add_settings_field( 'dttl_pl_uploadFile_field_2', 'my uploadFile field 2', array($this, 'create_form'), $this->_menuSlug, $mainSection, array('name' => 'new_title_input') );
-        add_settings_field( 'dttl_pl_uploadFile_field', 'my uploadFile field', array($this, 'create_form'), $this->_menuSlug, $mainSection, array('name' => 'view_uploadFile_input') );
+        // phương thức add_settings_field dùng để đăng ký dòng nhập liệu
+        // tham số thứ 2 là title của dòng
+        // tham số thứ 3 là hàm dùng để tạo giao diện cho từng dòng nhập dữ liệu
+        // tham số thứ 4 là slug của menu trên url của trình duyệt ở đây là dttl-pl-my-main-menu
+        // tham số thứ 5 là tên của section chứa dòng nhập liệu này
+        // tham số cuối cùng của hàm add_settings_field dùng để đưa một biến vào hàm tạo form 
+        // ở đây là create_form từ tham số này ta có thể in ra bất kỳ input nào mà ko cần gọi thêm hàm
+        add_settings_field( 
+            'dttl_pl_uploadFile_field_2', 
+            'Tên dữ liệu', 
+            array($this, 'create_form'), 
+            $this->_menuSlug, 
+            $mainSection, 
+            array('name' => 'new_title_input') );
+        add_settings_field( 
+            'dttl_pl_uploadFile_field', 
+            'my uploadFile field', 
+            array($this, 'create_form'), 
+            $this->_menuSlug, 
+            $mainSection, 
+            array('name' => 'view_uploadFile_input') );
         
-        // tham số cuối cùng của hàm add_settings_field dùng để đưa một biến vào hàm tạo form ở đây là create_form từ tham số này ta có thể in ra bất kỳ input nào mà ko cần gọi thêm hàm
-        $tmp = get_settings_errors( $this->_menuSlug );// phương thức get settings errors sẽ lấy dữ liệu từ phương thức add_settings_error (chú ký chỉ dùng ở menu là menu chính)
+        // phương thức get settings errors sẽ lấy dữ liệu từ phương thức add_settings_error (chú ký chỉ dùng ở menu là menu chính)
+        $tmp = get_settings_errors( $this->_menuSlug );
+        
     }
+    // đưa tham số cuối cùng vào add_setting_field ở trên để tạo form theo điều kiện
+    // hàm dùng để tạo giao diện cho dòng nhập liệu
     public function create_form($args){
 
         if ($args['name'] == 'view_uploadFile_input'){
@@ -42,6 +83,7 @@ class dttl_pl_ad{
             }
         }
         if ($args['name'] == 'new_title_input'){
+
             echo '<input type="text" name="dttl_pl_name[dttl_pl_new_title]" value="' . $this->_setting_options['dttl_pl_name']['dttl_pl_new_title'] .'"/>';
             echo '<p class="description">nhập ko quá 20 ký tự</p>';
         }
@@ -59,17 +101,38 @@ class dttl_pl_ad{
     }
 
     // 8. register setting
-    // tạo các ô input theo chuẩn wordpress
+    // tạo các ô input theo chuẩn wordpress(đăng ký một setting)
     public function register_setting_fields(){
-        register_setting( 'dttl_pl_options', 'dttl_pl_name', array($this, 'validate_setting') ); // tham số thứ 2 là tên được đưa vào cột option name của bảng options
+        // tham số thứ 2 là tên được đưa vào cột option name của bảng options
+        register_setting( 'dttl_pl_options', 'dttl_pl_name', array($this, 'validate_setting') ); 
         $mainSection = 'dttl_pl_main_section';
-        add_settings_section($mainSection, 'dttl main setting', array($this, 'main_section_view'), $this->_menuSlug);// tạo ra 1 section với tham số thứ nhất là id của section, tham số thứ 2 là title của section
+        add_settings_section(
+            $mainSection, 
+            'dttl main setting', 
+            array($this, 'main_section_view'), 
+            $this->_menuSlug);// tạo ra 1 section với tham số thứ nhất là id của section, tham số thứ 2 là title của section
         // tham số thứ 3 là hàm thực hiện, tham số thứ 4 là slug của menu
-        add_settings_section('dttl_pl_main_section-2', 'dttl main setting 2', array($this, 'main_section_view'), $this->_menuSlug);
-        add_settings_field( 'dttl_pl_field', 'my field', array($this, 'new_title_input'), $this->_menuSlug, $mainSection );
+        add_settings_section(
+            'dttl_pl_main_section-2', 
+            'dttl main setting 2', 
+            array($this, 'main_section_view'), 
+            $this->_menuSlug);
+        add_settings_field( 
+            'dttl_pl_field', 
+            'my field', 
+            array($this, 'new_title_input'), 
+            $this->_menuSlug, 
+            $mainSection );
         // phương thức add_setting_field với tham số thứ nhất là id của field tham số thứ 3 là nhãn của field tham số thứ 2 là hàm được gọi ra để tạo ô input của field tham số thứ 5 là slug của menu
         // tham số thứ 6 là id của section chứa field
-        add_settings_field( 'dttl_pl_field-2', 'my field 2' , array($this, 'new_title_input_2'), $this->_menuSlug, 'abc'); // khi tham số thứ 5 được đặt là 1 str bất kỳ thì sẽ sử dụng hương thức do_setting_fields để hiển thị nó vào vị trí mong muốn với tham số thứ 5 ứng với tham số thứ 2 của do setting fields
+        add_settings_field( 
+            'dttl_pl_field-2', 
+            'my field 2' , 
+            array($this, 'new_title_input_2'), 
+            $this->_menuSlug, 
+            'abc'); 
+            // khi tham số thứ 5 được đặt là 1 str bất kỳ thì sẽ sử dụng phương thức do_setting_fields 
+            // để hiển thị nó vào vị trí mong muốn với tham số thứ 5 ứng với tham số thứ 2 của do setting fields
         // 
     }
     public function new_title_input_2(){
@@ -77,7 +140,16 @@ class dttl_pl_ad{
         echo '<input type="checkbox" name="dttl_pl_name[dttl_pl_new_title_2]" value=""/>';
     }
     public function new_title_input(){
-        echo '<input type="text" name="dttl_pl_name[dttl_pl_new_title]" value="' . $this->_setting_options['dttl_pl_name']['dttl_pl_new_title'] .'"/>';
+        $htmlObj = new PLZendvnHtml();
+        $arr = array(
+            'id'=> 'dttl_pl_new_title',
+            'class'=>'abc',
+            'style'=> 'width: 300px',
+            'onclick'=> 'alert("hello")'
+        );
+        echo $htmlObj->textbox('dttl_pl_name[dttl_pl_new_title]','this is a text', $arr);
+        // textbox($name = '', $value = '', $attr = array(), $options = null)
+        // echo '<input type="text" name="dttl_pl_name[dttl_pl_new_title]" value="' . $this->_setting_options['dttl_pl_name']['dttl_pl_new_title'] .'"/>';
     }
     public function main_section_view(){
 
@@ -101,9 +173,9 @@ class dttl_pl_ad{
         return $flag;
     }
     public function validate_setting($data_input){ // tham số đưa vào là dữ liệu đưa vào từ ô input
-        // echo '<pre>';
-        // print_r($data_input);
-        // echo '</pre>';
+        echo '<pre>';
+        print_r($data_input);
+        echo '</pre>';
         // die();
         // kiểm tra chiều dài của chuỗi
         $errors = array();
@@ -116,7 +188,9 @@ class dttl_pl_ad{
                 $errors['dttl_pl_uploadFile'] = 'phần mở rộng không đúng với quy định';
             }else{
                 if(!empty($this->_setting_options['dttl_pl_name']['dttl_pl_path_uploadFile'])){
-                    @unlink($this->_setting_options['dttl_pl_name']['dttl_pl_path_uploadFile']); // hàm unlink() dùng để xóa file đã tồn tại trong uploads @ sẽ giúp ẩn đi lỗi nếu file ko tồn tại
+                    // hàm unlink() dùng để xóa file đã tồn tại trong uploads @ sẽ giúp ẩn đi lỗi nếu file ko tồn tại
+                    @unlink($this->_setting_options['dttl_pl_name']['dttl_pl_path_uploadFile']); 
+                    
                 }
                 
                 $override = array('test_form'=>false);
@@ -141,9 +215,11 @@ class dttl_pl_ad{
             foreach ($errors as $key => $val){
                 $strErrors .= $val . '<br/>';
             }
-            add_settings_error( $this->_menuSlug, 'my-setting', 'co loi', 'error' ); // chú ý nếu là 1 menu chính sẽ ko hiển thị lỗi cần sử dụng get_settings_errors để hiện thị ra ngoài
+            // chú ý nếu là 1 menu chính sẽ ko hiển thị lỗi cần sử dụng get_settings_errors để hiện thị ra ngoài
+            add_settings_error( $this->_menuSlug, 'my-setting', 'co loi', 'error' ); 
         }else{
-            add_settings_error( $this->_menuSlug, 'my-setting', 'success', 'updated' );// hiển thị cập nhật thành công (chỉ dùng khi là menu chính)
+            // hiển thị cập nhật thành công (chỉ dùng khi là menu chính)
+            add_settings_error( $this->_menuSlug, 'my-setting', 'success', 'updated' );
         }
         // echo '<pre>';
         // print_r($_FILES);
@@ -170,7 +246,7 @@ class dttl_pl_ad{
         $tmp = get_option('dttl_pl_version', '3.0');// tham số thử 2 là giá trị trả về khi ko tìm thấy option name dttl_pl_version
         // echo '<br/>' . $tmp;
     }
-    // 5. phương thức add_object_page và  add_utiltity_page
+    // 5. phương thức add_object_page và add_utiltity_page
     public function removeSysMenu(){
         //add_object_page( $page_title:string, $menu_title:string, $capability:string, $menu_slug:string, $function:callable, $icon_url:string );// thêm menu vào dưới menu comment
         //add_utility_page( $page_title:string, $menu_title:string, $capability:string, $menu_slug:string, $function:callable, $icon_url:string );// thêm menu vào dưới setting menu
@@ -187,20 +263,52 @@ class dttl_pl_ad{
     public function settingSubMainMenu(){
         $menuSlug = 'dttl-pl-my-main-menu';
         $submenuSlug = 'dttl-pl-my-submenu';
-        add_menu_page('my main menu title', 'my main menu', 'manage_options', $menuSlug, array($this, 'settingPage'), DTTL_PL_PLUGIN_URL . '/icons/Add-Bag-icon.png', 1);// add 1 menu vào menu chính tham 
+        add_menu_page(
+            'my main menu title', 
+            'my main menu', // tên menu
+            // manage_options là phân quyền cho user có thể truy cập
+            'manage_options', 
+            $menuSlug, 
+            // mảng ở dưới là phương thức kéo vào trang setting-page.php chứ giao diện của mennu này
+            array($this, 'settingPage'), 
+            DTTL_PL_PLUGIN_URL . '/icons/Add-Bag-icon.png', 
+            1);// add 1 menu vào menu chính tham 
         // tham số cuối cùng của hàm add_menu_page là vị trí hiển thị trên menu với 1 là vị trí trên cùng ko được điền trùng với các menu đã có ví dụ dashboard vị trí là 2 nếu trùng sẽ làm mất dashboard
-        add_submenu_page($menuSlug, 'my submenu title', 'my submenu', 'manage_options', $submenuSlug, array($this, 'settingSubmenuPage'));
+        add_submenu_page(
+            $menuSlug, 
+            'my submenu title', 
+            'my submenu', 
+            'manage_options', 
+            $submenuSlug, 
+            array($this, 'settingSubmenuPage')
+        );
     }
     // 2. add nhóm menu mới vào admin menu
     public function settingMainMenu(){
         $menuSlug = 'dttl-pl-my-main-menu';
-        
-        add_menu_page('my main menu title 2', 'my main menu 2', 'manage_options', $menuSlug . '-2', array($this, 'settingPage'), DTTL_PL_PLUGIN_URL . '/icons/Bin-Empty-icon.png');// add 1 menu vào menu chính tham
+        // add 1 menu vào menu chính tham
+        add_menu_page(
+            'my main menu title 2', 
+            'my main menu 3', // tên menu
+            // manage_options là phân quyền cho user có thể truy cập
+            'manage_options', 
+            $menuSlug . '-2', 
+            // mảng ở dưới là phương thức kéo vào trang setting-page.php chứ giao diện của mennu này
+            array($this, 'settingPage'), 
+            DTTL_PL_PLUGIN_URL . '/icons/Bin-Empty-icon.png'
+        );
     }
     // 1. thêm 1 submenu vào dashboard menu
     public function settingMenu(){
         $menuSlug = 'dttl-pl-my-menu';
-        add_dashboard_page('my menu title', 'my menu', 'manage_options', $menuSlug, array($this, 'settingPage'));// add 1 submenu vào menu dashboard tham số thứ 3 là phân quyền cho những user có thể truy cập
+        // add 1 submenu vào menu dashboard tham số thứ 3 là phân quyền cho những user có thể truy cập
+        add_dashboard_page(
+            'my menu title', 
+            'my menu', 
+            // manage_options là phân quyền cho user có thể truy cập
+            'manage_options', 
+            $menuSlug, 
+            array($this, 'settingPage'));
         // add_posts_page('my menu title', 'my menu', 'manage_options', $menuSlug, array($this, 'settingPage')); // add submenu vào post
         // add_media_page();
         // add_comments_page();
@@ -212,6 +320,7 @@ class dttl_pl_ad{
     }
     
     public function settingPage(){
+        // kéo vào giao diện của menu này
         require DTTL_PL_VIEWS_DIR . '/setting-page.php';
     }
     public function settingSubmenuPage(){
